@@ -1,21 +1,22 @@
-package handler;
+package com.example.MQTTBroker.handler;
 
+import com.example.MQTTBroker.processor.MQTTInforProcessor;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.mqtt.*;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import processor.MQTTInforProcessor;
-import processor.imp.MQTTnforProcessorImp;
-
+import com.example.MQTTBroker.processor.imp.MQTTnforProcessorImp;
+@Slf4j
 public class MQTTInforHandler extends ChannelInboundHandlerAdapter {
     private Logger logger =  LoggerFactory.getLogger(this.getClass());
     private static MQTTInforProcessor mqttInforProcessor=new MQTTnforProcessorImp();
     @Override
     public void channelRead(ChannelHandlerContext ctx,Object msg){
         if(msg==null){
-            logger.trace("请求为空!");
+            log.trace("请求为空!");
             return;
         }
         try{
@@ -23,7 +24,7 @@ public class MQTTInforHandler extends ChannelInboundHandlerAdapter {
             Channel channel=ctx.channel();
             inforHandler(channel,mqttMessage);
         }catch(ClassCastException e){
-            logger.error("请求转换格式失败!请求体格式:{}/n可能原因:{}",msg,"协议不支持");
+            log.error("请求转换格式失败!请求体格式:{}/n可能原因:{}",msg,"协议不支持");
         }
     }
     @Override

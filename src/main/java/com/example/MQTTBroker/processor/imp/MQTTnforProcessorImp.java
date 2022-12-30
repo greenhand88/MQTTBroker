@@ -1,17 +1,15 @@
-package processor.imp;
+package com.example.MQTTBroker.processor.imp;
+import com.example.MQTTBroker.processor.MQTTInforProcessor;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.mqtt.*;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.event.Level;
-import processor.MQTTInforProcessor;
+import lombok.extern.slf4j.Slf4j;
 
 /*
 为处理各种MQTT请求提供方法
  */
-public class MQTTnforProcessorImp implements MQTTInforProcessor{
-    private Logger logger= LoggerFactory.getLogger(this.getClass());
+@Slf4j
+public class MQTTnforProcessorImp implements MQTTInforProcessor {
     @Override
     public void conAck(Channel channel, MqttMessage mqttMessage) {
         //todo:加入身份验证
@@ -25,33 +23,49 @@ public class MQTTnforProcessorImp implements MQTTInforProcessor{
             MqttFixedHeader mqttFixedHeaderBack = new MqttFixedHeader(MqttMessageType.CONNACK, mqttFixedHeaderInfo.isDup(), MqttQoS.AT_MOST_ONCE, true, 0x02);
             //构建CONNACK消息体
             MqttConnAckMessage connAck = new MqttConnAckMessage(mqttFixedHeaderBack, mqttConnAckVariableHeaderBack);
-            logger.trace("Response:{}",connAck);
+            log.trace("Response:{}",connAck);
             channel.writeAndFlush(connAck);
         }catch (ClassCastException e){
-            logger.error("请求转换格式失败!请求体格式:{}/n可能原因:{}",mqttMessage,"协议不支持");
+            log.error("请求转换格式失败!请求体格式:{}/n可能原因:{}",mqttMessage,"协议不支持");
         }catch (Exception e){
-            logger.error("Error:{}",e);
+            log.error("Error:{}",e);
         }
     }
 
     @Override
     public void pubAck(Channel channel, MqttMessage mqttMessage) {
+        try{
 
+        }catch (Exception e){
+
+        }
     }
 
     @Override
     public void pubFin(Channel channel, MqttMessage mqttMessage) {
+        try{
 
+        }catch (Exception e){
+
+        }
     }
 
     @Override
     public void subAck(Channel channel, MqttMessage mqttMessage) {
+        try{
 
+        }catch (Exception e){
+
+        }
     }
 
     @Override
     public void unsubAck(Channel channel, MqttMessage mqttMessage) {
+        try{
 
+        }catch (Exception e){
+
+        }
     }
 
     @Override

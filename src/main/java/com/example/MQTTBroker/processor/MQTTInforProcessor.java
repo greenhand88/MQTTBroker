@@ -1,4 +1,4 @@
-package processor;
+package com.example.MQTTBroker.processor;
 
 import io.netty.channel.Channel;
 import io.netty.handler.codec.mqtt.MqttMessage;
