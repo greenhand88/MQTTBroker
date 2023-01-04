@@ -4,6 +4,8 @@ import io.netty.channel.Channel;
 import io.netty.handler.codec.mqtt.*;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,6 +17,8 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 public class MQTTnforProcessorImp implements MQTTInforProcessor {
+    @Autowired
+    private RedisTemplate<String,Object>redisTemplate;
     @Override
     public void conAck(Channel channel, MqttMessage mqttMessage) {
         //todo:加入身份验证

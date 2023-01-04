@@ -1,37 +1,33 @@
-package com.example.MQTTBroker;
+package com.example.MQTTBroker.bootstrap;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import lombok.extern.slf4j.Slf4j;
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import com.example.MQTTBroker.socketchannel.MySocketChannel;
 
 @Slf4j
-@SpringBootApplication
 public class Server {
     private static volatile ServerBootstrap serverBootstrap;
     @Value("${my.EndPointNum}")
     private int EndPointNum=128;
     @Value("${my.Port}")
     private int port=8080;
-    public static void main(String[] args) {
-        SpringApplication app=new SpringApplication(Server.class);
-        app.run(args);
-        new Server().startServer();
-    }
-    private void startServer() {
+
+    public void startServer() {
         if(serverBootstrap!=null){
             synchronized (serverBootstrap){
                 if(serverBootstrap!=null){
                     serverBootstrap=new ServerBootstrap();
+                    makeServer(serverBootstrap);
                 }
             }
         }
-        makeServer(serverBootstrap);
     }
     private void makeServer(ServerBootstrap bootstrap){
         EventLoopGroup bossGroup = new NioEventLoopGroup();
