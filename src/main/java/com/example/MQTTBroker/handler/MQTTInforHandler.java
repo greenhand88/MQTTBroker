@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory;
 import com.example.MQTTBroker.processor.imp.MQTTnforProcessorImp;
 @Slf4j
 public class MQTTInforHandler extends ChannelInboundHandlerAdapter {
-    private Logger logger =  LoggerFactory.getLogger(this.getClass());
     private static MQTTInforProcessor mqttInforProcessor=new MQTTnforProcessorImp();
     @Override
     public void channelRead(ChannelHandlerContext ctx,Object msg){

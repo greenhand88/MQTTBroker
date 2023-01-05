@@ -13,35 +13,28 @@ import com.example.MQTTBroker.socketchannel.MySocketChannel;
 
 @Slf4j
 public class Server {
-    private static volatile ServerBootstrap serverBootstrap;
-    @Value("${my.EndPointNum}")
-    private int EndPointNum=128;
-    @Value("${my.Port}")
-    private int port=8080;
+    private ServerBootstrap serverBootstrap;
+    private EventLoopGroup bossGroup;
+    private EventLoopGroup workerGroup;
+    private int EndPointNum=200;
+    private int port=8888;
 
     public void startServer() {
-        if(serverBootstrap!=null){
-            synchronized (serverBootstrap){
-                if(serverBootstrap!=null){
-                    serverBootstrap=new ServerBootstrap();
-                    makeServer(serverBootstrap);
-                }
-            }
-        }
+        serverBootstrap=new ServerBootstrap();
+        makeServer();
     }
-    private void makeServer(ServerBootstrap bootstrap){
-        EventLoopGroup bossGroup = new NioEventLoopGroup();
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
+    private void makeServer(){
+        bossGroup = new NioEventLoopGroup();
+        workerGroup = new NioEventLoopGroup();
         try{
-            bootstrap.group(bossGroup,workerGroup)
+            serverBootstrap.group(bossGroup,workerGroup)
                     .channel(NioServerSocketChannel.class)//设置为nio
                     .option(ChannelOption.SO_BACKLOG, EndPointNum)
                     .option(ChannelOption.SO_REUSEADDR,true)//允许端口复用
                     .childOption(ChannelOption.SO_KEEPALIVE,true)
                     .childHandler(new MySocketChannel());
-
-            log.info("com.example.MQTTBroker.handler.Server Ready!");
-            ChannelFuture channelFuture = bootstrap.bind(port).sync();//绑定端口号并启动服务端
+            log.info("com.example.MQTTBroker.bootstrap.Server Ready!");
+            ChannelFuture channelFuture = serverBootstrap.bind(port).sync();//绑定端口号并启动服务端
             channelFuture.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture channelFuture) throws Exception {
@@ -57,6 +50,7 @@ public class Server {
         }finally {
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();
+            log.info("Shutdown Server successfully!");
         }
     }
 }
