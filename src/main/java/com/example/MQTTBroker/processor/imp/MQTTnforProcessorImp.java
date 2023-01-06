@@ -1,10 +1,6 @@
 package com.example.MQTTBroker.processor.imp;
-import com.example.MQTTBroker.VO.PublishInfor;
 import com.example.MQTTBroker.processor.MQTTInforProcessor;
 import com.example.MQTTBroker.tool.NettyAutowireTool;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.mqtt.*;
@@ -24,7 +20,7 @@ public class MQTTnforProcessorImp implements MQTTInforProcessor {
 
     public RedisTemplate<String,Object>redisTemplate= (RedisTemplate<String,Object>)NettyAutowireTool.getBean("redisTemplate");
     private volatile static Map<String,Channel>map=new ConcurrentHashMap<>();
-    private static ThreadPoolExecutor threadPoolExecutor=new ThreadPoolExecutor(3, 5,
+    private static ThreadPoolExecutor threadPoolExecutor=new ThreadPoolExecutor(10, 100,
             10, TimeUnit.SECONDS, new ArrayBlockingQueue<>(200));
     @Override
     public void conAck(Channel channel, MqttMessage mqttMessage) {
@@ -36,7 +32,7 @@ public class MQTTnforProcessorImp implements MQTTInforProcessor {
             //返回报文可变报头
             MqttConnAckVariableHeader backmqttConnAckVariableHeader = new MqttConnAckVariableHeader(MqttConnectReturnCode.CONNECTION_ACCEPTED, mqttConnectVariableHeader.isCleanSession());
             //返回报文固定报头
-            MqttFixedHeader backMqttFixedHeader = new MqttFixedHeader(MqttMessageType.CONNACK, mqttFixedHeader.isDup(), MqttQoS.AT_MOST_ONCE, true, 0x02);
+            MqttFixedHeader backMqttFixedHeader = new MqttFixedHeader(MqttMessageType.CONNACK, mqttFixedHeader.isDup(), MqttQoS.AT_MOST_ONCE, mqttFixedHeader.isRetain(), 0x02);
             //构建CONNACK消息体
             MqttConnAckMessage connAck = new MqttConnAckMessage(backMqttFixedHeader, backmqttConnAckVariableHeader);
             log.trace("Response:{}",connAck);
