@@ -47,5 +47,4 @@ public interface MQTTInforProcessor {
      * @param mqttMessage
      */
     public void heartBeatAck (Channel channel, MqttMessage mqttMessage);
-
 }
