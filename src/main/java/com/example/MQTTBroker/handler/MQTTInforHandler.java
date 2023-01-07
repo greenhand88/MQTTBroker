@@ -6,12 +6,28 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.mqtt.*;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.example.MQTTBroker.processor.imp.MQTTnforProcessorImp;
+
+import java.util.Map;
+import java.util.concurrent.*;
+
 @Slf4j
 public class MQTTInforHandler extends ChannelInboundHandlerAdapter {
     private static MQTTInforProcessor mqttInforProcessor=new MQTTnforProcessorImp();
+    public volatile static Map<String,Channel> map=new ConcurrentHashMap<>();
+    public static ThreadPoolExecutor threadPoolExecutor=new ThreadPoolExecutor(10, 100,
+            10
+            , TimeUnit.SECONDS
+            , new ArrayBlockingQueue<>(200)
+            , new ThreadFactory() {
+        @Override
+        public Thread newThread(Runnable r) {
+            return new Thread(r);
+        }
+    }
+            ,
+            new ThreadPoolExecutor.DiscardPolicy()
+    );
     @Override
     public void channelRead(ChannelHandlerContext ctx,Object msg){
         if(msg==null){
@@ -25,6 +41,11 @@ public class MQTTInforHandler extends ChannelInboundHandlerAdapter {
         }catch(ClassCastException e){
             log.error("请求转换格式失败!请求体格式:{}/n可能原因:{}",msg,"协议不支持");
         }
+    }
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        map.remove(ctx.channel().id().asLongText());
+        ctx.fireChannelInactive();
     }
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {

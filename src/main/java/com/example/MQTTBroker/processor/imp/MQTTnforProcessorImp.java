@@ -1,13 +1,17 @@
 package com.example.MQTTBroker.processor.imp;
+import com.example.MQTTBroker.handler.MQTTInforHandler;
 import com.example.MQTTBroker.processor.MQTTInforProcessor;
 import com.example.MQTTBroker.tool.NettyAutowireTool;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.mqtt.*;
 
+import io.netty.util.CharsetUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
@@ -17,15 +21,12 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 public class MQTTnforProcessorImp implements MQTTInforProcessor {
-
-    public RedisTemplate<String,Object>redisTemplate= (RedisTemplate<String,Object>)NettyAutowireTool.getBean("redisTemplate");
-    private volatile static Map<String,Channel>map=new ConcurrentHashMap<>();
-    private static ThreadPoolExecutor threadPoolExecutor=new ThreadPoolExecutor(10, 100,
-            10, TimeUnit.SECONDS, new ArrayBlockingQueue<>(200));
+    private RedisTemplate<String,Object> redisTemplate= (RedisTemplate<String,Object>) NettyAutowireTool.getBean("redisTemplate");
     @Override
     public void conAck(Channel channel, MqttMessage mqttMessage) {
         //todo:加入身份验证
         try{
+            Map map= MQTTInforHandler.map;
             MqttConnectMessage mqttConnectMessage = (MqttConnectMessage) mqttMessage;
             MqttFixedHeader mqttFixedHeader = mqttConnectMessage.fixedHeader();
             MqttConnectVariableHeader mqttConnectVariableHeader = mqttConnectMessage.variableHeader();
@@ -49,23 +50,22 @@ public class MQTTnforProcessorImp implements MQTTInforProcessor {
     @Override
     public void pubAck(Channel channel, MqttMessage mqttMessage) {
         try{
+            Map<String,Channel>map= MQTTInforHandler.map;
+            ThreadPoolExecutor threadPoolExecutor=MQTTInforHandler.threadPoolExecutor;
             MqttPublishMessage mqttPublishMessage = (MqttPublishMessage) mqttMessage;
+            byte[]data=new byte[mqttPublishMessage.payload().readableBytes()];
+            mqttPublishMessage.payload().readBytes(data);
             MqttFixedHeader mqttFixedHeader = mqttPublishMessage.fixedHeader();
             MqttQoS mqttQoS = (MqttQoS) mqttFixedHeader.qosLevel();//获取等级
-            byte[] infor = new byte[mqttPublishMessage.payload().readableBytes()];//缓存
-            mqttPublishMessage.payload().readBytes(infor);
             //业务代码
             String topic=mqttPublishMessage.variableHeader().topicName();
             //发布信息
-            MqttMessage mqttMessage1=new MqttPublishMessage(new MqttFixedHeader(MqttMessageType.PUBLISH,mqttFixedHeader.isDup(), MqttQoS.AT_MOST_ONCE, mqttFixedHeader.isRetain(), 0x02)
-                    ,mqttPublishMessage.variableHeader()
-                    , Unpooled.wrappedBuffer(infor));
-            redisTemplate.opsForSet().members(topic)
+            redisTemplate.opsForSet().members(topic)//给在线的订阅者直接获得信息
                     .stream()
                     .map(object -> (String)object)
                     .forEach(channel1 -> threadPoolExecutor.execute(()-> {
                         if(map.containsKey(channel1))
-                            map.get(channel1).writeAndFlush(mqttMessage1);
+                            map.get(channel1).writeAndFlush(mqttPublishMessage);
                         else
                             redisTemplate.opsForSet().remove(topic,channel1);//惰性去除Redis中无效的数据
                     }));
@@ -91,7 +91,7 @@ public class MQTTnforProcessorImp implements MQTTInforProcessor {
             }
         }catch (ClassCastException e){
             log.error("发布确认出现问题:{}",e);
-            log.error("请求转换格式失败!请求体格式:{}/n可能原因:{}",mqttMessage,"协议不支持");
+            //log.error("请求转换格式失败!请求体格式:{}/n可能原因:{}",mqttMessage,"协议不支持");
         }catch (Exception e){
             log.error("发布确认出现问题:{}",e);
         }
@@ -116,6 +116,7 @@ public class MQTTnforProcessorImp implements MQTTInforProcessor {
     @Override
     public void subAck(Channel channel, MqttMessage mqttMessage) {
         try{
+            ThreadPoolExecutor threadPoolExecutor=MQTTInforHandler.threadPoolExecutor;
             MqttSubscribeMessage mqttSubscribeMessage = (MqttSubscribeMessage) mqttMessage;
             MqttMessageIdVariableHeader mqttMessageIdVariableHeader = mqttSubscribeMessage.variableHeader();
             //todo:进行业务处理
@@ -129,7 +130,14 @@ public class MQTTnforProcessorImp implements MQTTInforProcessor {
                 grantedQoSLevels.add(mqttSubscribeMessage.payload()
                         .topicSubscriptions().get(i).qualityOfService().value());
             }
-            topics.stream().forEach(topic ->redisTemplate.opsForSet().add(topic,channel.id().asLongText()));
+            topics.stream().forEach(topic -> threadPoolExecutor.execute(()->redisTemplate.opsForSet().add(topic,channel.id().asLongText())));
+            topics.stream().forEach(topic-> threadPoolExecutor.execute(()->{
+                            String welcome="Welcome to "+topic+"!";
+                            channel.writeAndFlush(
+                                    new MqttPublishMessage(new MqttFixedHeader(MqttMessageType.PUBLISH,false,MqttQoS.AT_MOST_ONCE,false,0x02)
+                                    ,new MqttPublishVariableHeader(topic,0)
+                                    ,Unpooled.wrappedBuffer(welcome.getBytes(CharsetUtil.UTF_8))));})
+                    );
             MqttMessageIdVariableHeader backMqttMessageIdVariableHeader = MqttMessageIdVariableHeader.from(mqttMessageIdVariableHeader.messageId());
             //构建返回报文,有效负载
             MqttSubAckPayload backMqttSubAckPayload= new MqttSubAckPayload(grantedQoSLevels);
@@ -150,6 +158,11 @@ public class MQTTnforProcessorImp implements MQTTInforProcessor {
     @Override
     public void unsubAck(Channel channel, MqttMessage mqttMessage) {
         try{
+            ThreadPoolExecutor threadPoolExecutor=MQTTInforHandler.threadPoolExecutor;
+            //业务代码
+            MqttUnsubscribeMessage msg=(MqttUnsubscribeMessage)mqttMessage;
+            List<String> topics = msg.payload().topics();
+            topics.stream().forEach(topic -> threadPoolExecutor.execute(()->redisTemplate.opsForSet().remove(topic,channel.id().asLongText())));
             MqttMessageIdVariableHeader messageIdVariableHeader = (MqttMessageIdVariableHeader) mqttMessage.variableHeader();
             MqttMessageIdVariableHeader backMqttMessageIdVariableHeader = MqttMessageIdVariableHeader.from(messageIdVariableHeader.messageId());
             MqttFixedHeader backMqttFixedHeader = new MqttFixedHeader(MqttMessageType.UNSUBACK, false, MqttQoS.AT_MOST_ONCE, false, 2);

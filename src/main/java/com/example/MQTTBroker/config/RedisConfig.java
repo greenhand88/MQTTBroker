@@ -46,4 +46,5 @@ public class RedisConfig {
         }
         return jackson2JsonRedisSerializer;
     }
+
 }
