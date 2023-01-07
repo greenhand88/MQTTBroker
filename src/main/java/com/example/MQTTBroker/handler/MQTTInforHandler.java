@@ -6,6 +6,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.mqtt.*;
+import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 import com.example.MQTTBroker.processor.imp.MQTTnforProcessorImp;
 
@@ -43,6 +44,8 @@ public class MQTTInforHandler extends ChannelInboundHandlerAdapter {
             inforHandler(channel,mqttMessage);
         }catch(ClassCastException e){
             log.error("请求转换格式失败!请求体格式:{}/n可能原因:{}",msg,"协议不支持");
+        }finally {
+            ReferenceCountUtil.release(msg);//必须,否则可能造成ByteBuf内存泄漏
         }
     }
     @Override

@@ -1,9 +1,7 @@
 package com.example.MQTTBroker.processor.imp;
 import com.example.MQTTBroker.handler.MQTTInforHandler;
-import com.example.MQTTBroker.pojo.PubInfor;
 import com.example.MQTTBroker.processor.MQTTInforProcessor;
 import com.example.MQTTBroker.tool.NettyAutowireTool;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -13,7 +11,6 @@ import io.netty.util.CharsetUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
@@ -66,7 +63,7 @@ public class MQTTnforProcessorImp implements MQTTInforProcessor {
                     .forEach(channel1 -> threadPoolExecutor.execute(()-> {
                         if(map.containsKey(channel1)) {
                             ByteBuf byteBuf = Unpooled.wrappedBuffer(data);
-                            map.get(channel1).writeAndFlush(new PubInfor(
+                            map.get(channel1).writeAndFlush(new MqttPublishMessage(
                                     new MqttFixedHeader(MqttMessageType.PUBLISH, mqttFixedHeader.isDup(), mqttFixedHeader.qosLevel(), mqttFixedHeader.isRetain(), mqttFixedHeader.remainingLength()),
                                     new MqttPublishVariableHeader(mqttPublishMessage.variableHeader().topicName(), mqttPublishMessage.variableHeader().packetId()),
                                     byteBuf
@@ -138,10 +135,13 @@ public class MQTTnforProcessorImp implements MQTTInforProcessor {
             }
             topics.stream().forEach(topic -> threadPoolExecutor.execute(()->redisTemplate.opsForSet().add(topic,channel.id().asLongText())));
             topics.stream().forEach(topic-> threadPoolExecutor.execute(()->{
-                            String welcome="Welcome to "+topic+"!";
-                            ByteBuf byteBuf=Unpooled.wrappedBuffer(welcome.getBytes(CharsetUtil.UTF_8));
-                            PubInfor pubInfor=new PubInfor(byteBuf,topic);
-                            channel.writeAndFlush(pubInfor);
+                                String welcome="Welcome to "+topic+"!";
+                                ByteBuf byteBuf=Unpooled.wrappedBuffer(welcome.getBytes(CharsetUtil.UTF_8));
+                                channel.writeAndFlush(new MqttPublishMessage(
+                                        new MqttFixedHeader(MqttMessageType.PUBLISH,false,MqttQoS.AT_MOST_ONCE,false,0x02),
+                                        new MqttPublishVariableHeader(topic,0),
+                                        byteBuf
+                                ));
                             })
                     );
             MqttMessageIdVariableHeader backMqttMessageIdVariableHeader = MqttMessageIdVariableHeader.from(mqttMessageIdVariableHeader.messageId());
