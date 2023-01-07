@@ -2,6 +2,7 @@ package com.example.MQTTBroker.handler;
 
 import com.example.MQTTBroker.processor.MQTTInforProcessor;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.mqtt.*;
@@ -12,6 +13,7 @@ import java.util.Map;
 import java.util.concurrent.*;
 
 @Slf4j
+@ChannelHandler.Sharable
 public class MQTTInforHandler extends ChannelInboundHandlerAdapter {
     private static MQTTInforProcessor mqttInforProcessor=new MQTTnforProcessorImp();
     public volatile static Map<String,Channel> map=new ConcurrentHashMap<>();
@@ -37,6 +39,7 @@ public class MQTTInforHandler extends ChannelInboundHandlerAdapter {
         try{
             MqttMessage mqttMessage=(MqttMessage) msg;
             Channel channel=ctx.channel();
+            map.put(channel.id().asLongText(),channel);
             inforHandler(channel,mqttMessage);
         }catch(ClassCastException e){
             log.error("请求转换格式失败!请求体格式:{}/n可能原因:{}",msg,"协议不支持");
