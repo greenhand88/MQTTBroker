@@ -65,7 +65,11 @@ public class MQTTnforProcessorImp implements MQTTInforProcessor {
                     .map(object -> (String)object)
                     .forEach(channel1 -> threadPoolExecutor.execute(()-> {
                         if(map.containsKey(channel1))
-                            map.get(channel1).writeAndFlush(mqttPublishMessage);
+                            map.get(channel1).writeAndFlush(new MqttPublishMessage(
+                                    new MqttFixedHeader(MqttMessageType.PUBLISH,mqttFixedHeader.isDup(),mqttFixedHeader.qosLevel(),mqttFixedHeader.isRetain(),mqttFixedHeader.remainingLength()),
+                                    new MqttPublishVariableHeader(mqttPublishMessage.variableHeader().topicName(),mqttPublishMessage.variableHeader().packetId()),
+                                    Unpooled.wrappedBuffer(data)
+                            ));
                         else
                             redisTemplate.opsForSet().remove(topic,channel1);//惰性去除Redis中无效的数据
                     }));
