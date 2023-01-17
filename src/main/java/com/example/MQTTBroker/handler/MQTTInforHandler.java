@@ -17,7 +17,7 @@ import java.util.concurrent.*;
 @ChannelHandler.Sharable
 public class MQTTInforHandler extends ChannelInboundHandlerAdapter {
     private static MQTTInforProcessor mqttInforProcessor=new MQTTnforProcessorImp();
-    public volatile static Map<String,Channel> map=new ConcurrentHashMap<>();
+    public static Map<String, Channel> map=new ConcurrentHashMap<>();
     public static ThreadPoolExecutor threadPoolExecutor=new ThreadPoolExecutor(10, 100,
             10
             , TimeUnit.SECONDS
@@ -70,10 +70,6 @@ public class MQTTInforHandler extends ChannelInboundHandlerAdapter {
         }
         if(mqttMessage.fixedHeader().messageType().equals(MqttMessageType.PUBLISH)){
             mqttInforProcessor.pubAck(channel,mqttMessage);
-            return;
-        }
-        if(mqttMessage.fixedHeader().messageType().equals(MqttMessageType.PUBCOMP)){
-            mqttInforProcessor.pubFin(channel,mqttMessage);
             return;
         }
         if(mqttMessage.fixedHeader().messageType().equals(MqttMessageType.SUBSCRIBE)){

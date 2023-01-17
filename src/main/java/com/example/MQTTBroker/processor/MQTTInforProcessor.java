@@ -12,20 +12,12 @@ public interface MQTTInforProcessor {
      */
     public void conAck (Channel channel, MqttMessage mqttMessage);
 
-
     /**
      * 发布确认
      * @param channel
      * @param mqttMessage
      */
     public void pubAck (Channel channel, MqttMessage mqttMessage);
-
-    /**
-     * 发布完成
-     * @param channel
-     * @param mqttMessage
-     */
-    public void pubFin (Channel channel, MqttMessage mqttMessage);
 
     /**
      * 订阅确认
